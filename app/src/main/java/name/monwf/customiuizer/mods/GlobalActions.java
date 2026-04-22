@@ -1,7 +1,6 @@
 package name.monwf.customiuizer.mods;
 
 import static java.lang.System.currentTimeMillis;
-import static name.monwf.customiuizer.mods.utils.XposedHelpers.findClass;
 import static name.monwf.customiuizer.mods.utils.XposedHelpers.findClassIfExists;
 import static name.monwf.customiuizer.mods.utils.XposedHelpers.findMethodExact;
 
@@ -49,9 +48,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface.AfterHookCallback;
+import io.github.libxposed.api.XposedInterface;
+import name.monwf.customiuizer.mods.utils.HookerClassHelper.MethodHookParam;
 import io.github.libxposed.api.XposedModuleInterface;
-import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam;
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam;
 import miui.app.MiuiFreeFormManager;
 import miui.process.ForegroundInfo;
 import miui.process.ProcessManager;
@@ -97,10 +97,8 @@ public class GlobalActions {
             case 11 -> commonSendAction(context, "SwitchToPrevApp");
             case 12 -> commonSendAction(context, "OpenPowerMenu");
             case 13 -> commonSendAction(context, "ClearMemory");
-            case 14 -> commonSendAction(context, "ToggleColorInversion");
             case 15 -> commonSendAction(context, "GoBack");
             case 16 -> commonSendAction(context, "SimulateMenu");
-            case 17 -> commonSendAction(context, "OpenVolumeDialog");
             case 18 -> commonSendAction(context, "VolumeUp");
             case 19 -> commonSendAction(context, "VolumeDown");
             case 20 -> launchActivityIntent(context, key, skipLock);
@@ -128,10 +126,8 @@ public class GlobalActions {
             case 11 -> R.string.array_global_actions_back;
             case 12 -> R.string.array_global_actions_powermenu_short;
             case 13 -> R.string.array_global_actions_clearmemory;
-            case 14 -> R.string.array_global_actions_invertcolors;
             case 15 -> R.string.array_global_actions_goback;
             case 16 -> R.string.array_global_actions_menu;
-            case 17 -> R.string.array_global_actions_volume;
             case 18 -> R.string.array_global_actions_volume_up;
             case 19 -> R.string.array_global_actions_volume_down;
             case 22 -> R.string.array_global_actions_onehanded_left;
@@ -227,87 +223,26 @@ public class GlobalActions {
                 }
 
                 else if (action.equals(ACTION_PREFIX + "ExpandSettings")) {
-                    boolean forceExpand = intent.getBooleanExtra("forceExpand", false);
                     Object mStatusBar = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.phone.CentralSurfaces");
-                    Object mControlCenterController = XposedHelpers.getObjectField(mStatusBar, "mControlCenterController");
-                    boolean isUseControlCenter = (boolean)XposedHelpers.callMethod(mControlCenterController, "isUseControlCenter");
-                    if (isUseControlCenter) {
-                        if (forceExpand || (boolean)XposedHelpers.callMethod(mControlCenterController, "isCollapsed")) {
-                            Object lazyControlCenter = XposedHelpers.getObjectField(mControlCenterController, "controlCenter");
-                            Object controlCenter = XposedHelpers.callMethod(lazyControlCenter, "get");
-                            XposedHelpers.callMethod(controlCenter, "animateExpandSettingsPanel", "");
-                        }
-                        else
-                            XposedHelpers.callMethod(mControlCenterController, "collapseControlCenter", true, true);
-                        return;
-                    }
+//                    Object mControlCenterController = XposedHelpers.getObjectField(mStatusBar, "mControlCenterController");
+//                    boolean isUseControlCenter = (boolean)ModuleHelper.getObjectFieldByPath(mControlCenterController, "useControlCenterObserver.useControlCenter");
+//                    if (isUseControlCenter) {
+//                        Object controlCenter = XposedHelpers.getObjectField(mControlCenterController, "controlCenter");
+//                        if (!((boolean)XposedHelpers.callMethod(controlCenter, "getExpanded"))) {
+//                            XposedHelpers.callMethod(controlCenter, "expand", true);
+//                        }
+//                        else
+//                            XposedHelpers.callMethod(controlCenter, "collapse", true);
+//                        return;
+//                    }
                     Object callbacks = XposedHelpers.getObjectField(mStatusBar, "mCommandQueueCallbacks");
                     XposedHelpers.callMethod(callbacks, "animateExpandSettingsPanel", "");
                 }
 
                 else if (action.equals(ACTION_PREFIX + "OpenRecents")) {
-                    Intent recentIntent = new Intent("SYSTEM_ACTION_RECENTS");
-                    recentIntent.setPackage("com.android.systemui");
-                    context.sendBroadcast(recentIntent);
-                }
-
-                else if (action.equals(ACTION_PREFIX + "OpenVolumeDialog")) {
-                    Object mStatusBar = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.phone.CentralSurfaces");
-                    Object mVolumeComponent = XposedHelpers.getObjectField(mStatusBar, "mVolumeComponent");
-                    Object mVolumeDialogPlugin = XposedHelpers.getObjectField(mVolumeComponent, "mDialog");
-                    Object miuiVolumeDialog = XposedHelpers.getObjectField(mVolumeDialogPlugin, "mVolumeDialogImpl");
-                    if (miuiVolumeDialog == null) {
-                        XposedHelpers.log("OpenVolumeDialog", "MIUI volume dialog is NULL!");
-                        return;
-                    }
-                    else if (action.equals(ACTION_PREFIX + "ToggleZenMode")) {
-                        Object zenModeController = XposedHelpers.callStaticMethod(findClass("com.android.systemui.Dependency", context.getClassLoader()), "get", findClassIfExists("com.android.systemui.statusbar.policy.ZenModeController", context.getClassLoader()));
-                        boolean zenModeEnabled = (boolean)XposedHelpers.callMethod(zenModeController, "isZenModeOn");
-                        if (zenModeEnabled) {
-                            XposedHelpers.callMethod(zenModeController, "setZen", 0, null, "DNDTile");
-                        }
-                        else {
-                            XposedHelpers.callMethod(zenModeController, "setZen", 1, null, "DNDTile");
-                        }
-                    }
-                    else if (action.equals(ACTION_PREFIX + "ToggleNightMode")) {
-                        Settings.System.putInt(context.getContentResolver(), "dark_mode_enable_by_setting", 1);
-                        UiModeManager mUiModeManager = (UiModeManager) context.getSystemService("uimode");
-                        boolean nightMode = mUiModeManager.getNightMode() == 2;
-                        XposedHelpers.callMethod(mUiModeManager, "setNightModeActivated", !nightMode);
-                    }
-
-                    Handler mHandler = (Handler)XposedHelpers.getObjectField(miuiVolumeDialog, "mHandler");
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            boolean mShowing = XposedHelpers.getBooleanField(miuiVolumeDialog, "mShowing");
-                            boolean mExpanded = XposedHelpers.getBooleanField(miuiVolumeDialog, "mExpanded");
-
-                            AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-                            boolean isInCall = am.getMode() == AudioManager.MODE_IN_CALL || am.getMode() == AudioManager.MODE_IN_COMMUNICATION;
-                            if (mShowing) {
-                                if (mExpanded || isInCall)
-                                    XposedHelpers.callMethod(miuiVolumeDialog, "dismissH", 1);
-                                else {
-                                    Object mDialogView = XposedHelpers.getObjectField(miuiVolumeDialog, "mDialogView");
-                                    View mExpandButton = (View)XposedHelpers.getObjectField(mDialogView, "mExpandButton");
-                                    View.OnClickListener mClickExpand = (View.OnClickListener)XposedHelpers.getObjectField(mDialogView, "expandListener");
-                                    mClickExpand.onClick(mExpandButton);
-                                }
-                            } else {
-                                Object mController = XposedHelpers.getObjectField(mVolumeDialogPlugin, "mController");
-                                if (isInCall) {
-                                    XposedHelpers.callMethod(mController, "setActiveStream", 0);
-                                    XposedHelpers.setBooleanField(miuiVolumeDialog, "mNeedReInit", true);
-                                } else if (am.isMusicActive()) {
-                                    XposedHelpers.callMethod(mController, "setActiveStream", 3);
-                                    XposedHelpers.setBooleanField(miuiVolumeDialog, "mNeedReInit", true);
-                                }
-                                XposedHelpers.callMethod(miuiVolumeDialog, "showH", 1);
-                            }
-                        }
-                    });
+                    Intent actionIntent = new Intent("SYSTEM_ACTION_RECENTS");
+                    actionIntent.setPackage("com.android.systemui");
+                    context.sendBroadcast(actionIntent);
                 }
 
                 else if (action.equals(ACTION_PREFIX + "ToggleHotspot")) {
@@ -324,7 +259,8 @@ public class GlobalActions {
                 }
 
                 else if (action.equals(ACTION_PREFIX + "ToggleZenMode")) {
-                    Object zenModeController = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.policy.ZenModeController");
+                    Object mStatusBar = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.phone.CentralSurfaces");
+                    Object zenModeController = ModuleHelper.getObjectFieldByPath(mStatusBar, "mIconPolicy.mZenController");
                     boolean zenModeEnabled = (boolean)XposedHelpers.callMethod(zenModeController, "isZenModeOn");
                     if (zenModeEnabled) {
                         XposedHelpers.callMethod(zenModeController, "setZen", 0, "DNDTile");
@@ -335,7 +271,9 @@ public class GlobalActions {
                 }
 
                 else if (action.equals(ACTION_PREFIX + "ToggleFlashlight")) {
-                    XposedHelpers.callStaticMethod(findClass("com.miui.systemui.util.CommonUtil", context.getClassLoader()), "toggleTorch");
+                    Object mFlashlightController = ModuleHelper.getFlashlightController(context.getClassLoader(), "mFlashlightController");
+                    boolean z = !(boolean) XposedHelpers.callMethod(mFlashlightController, "isEnabled");
+                    XposedHelpers.callMethod(mFlashlightController, "setFlashlight", z);
                 }
                 else if (action.equals(ACTION_PREFIX + "ToggleGPS")) {
                     Object locationController = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.policy.LocationController");
@@ -434,7 +372,9 @@ public class GlobalActions {
                     XposedHelpers.callMethod(context.getSystemService(Context.POWER_SERVICE), "goToSleep", SystemClock.uptimeMillis(), 7, 0);
                 }
                 else if (action.equals(ACTION_PREFIX + "TakeScreenshot")) {
-                    context.sendBroadcast(new Intent("android.intent.action.CAPTURE_SCREENSHOT"));
+                    Intent actionIntent = new Intent("SYSTEM_ACTION_TAKE_SCREENSHOT");
+                    actionIntent.setPackage("com.android.systemui");
+                    context.sendBroadcast(actionIntent);
                 }
                 else if (action.equals(ACTION_PREFIX + "GoBack")) {
                     new Thread(new Runnable() {
@@ -453,8 +393,9 @@ public class GlobalActions {
                     audioManager.adjustVolume(AudioManager.ADJUST_LOWER, 1 << 12 /* FLAG_FROM_KEY */ | AudioManager.FLAG_SHOW_UI | AudioManager.FLAG_ALLOW_RINGER_MODES | AudioManager.FLAG_PLAY_SOUND | AudioManager.FLAG_VIBRATE);
                 }
                 else if (action.equals(ACTION_PREFIX + "OpenPowerMenu")) {
-                    Object mCommandQueue = ModuleHelper.getDepInstance(context.getClassLoader(), "com.android.systemui.statusbar.CommandQueue");
-                    XposedHelpers.callMethod(mCommandQueue, "showGlobalActionsMenu");
+                    Intent actionIntent = new Intent("SYSTEM_ACTION_POWER_DIALOG");
+                    actionIntent.setPackage("com.android.systemui");
+                    context.sendBroadcast(actionIntent);
                 }
                 else if (action.equals(ACTION_PREFIX + "LaunchIntent")) {
                     Intent launchIntent = intent.getParcelableExtra("intent");
@@ -479,11 +420,11 @@ public class GlobalActions {
         }
     };
 
-    public static void miuizerSettingsHook(PackageLoadedParam lpparam) {
+    public static void miuizerSettingsHook(PackageReadyParam lpparam) {
         int settingsIconResId = MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable");
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.getClassLoader(), "updateHeaderList", List.class, new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void before(final MethodHookParam param) throws Throwable {
                 if (param.getArgs()[0] == null) return;
 
                 Context mContext = ((Activity)param.getThisObject()).getBaseContext();
@@ -509,13 +450,14 @@ public class GlobalActions {
 
                 int themes = mContext.getResources().getIdentifier("launcher_settings", "id", mContext.getPackageName());
                 int special = mContext.getResources().getIdentifier("other_special_feature_settings", "id", mContext.getPackageName());
+                int security_status = mContext.getResources().getIdentifier("security_status", "id", mContext.getPackageName());
 
                 List<Object> headers = (List<Object>)param.getArgs()[0];
                 int position = 0;
                 for (Object head: headers) {
                     position++;
                     long id = XposedHelpers.getLongField(head, "id");
-                    if (opt == 1 && id == -1) { headers.add(position - 1, header); return; }
+                    if (opt == 1 && id == security_status) { headers.add(position, header); return; }
                     if (opt == 2 && id == themes) { headers.add(position, header); return; }
                     if (opt == 3 && id == special) { headers.add(position, header); return; }
                 }
@@ -527,7 +469,7 @@ public class GlobalActions {
         });
         ModuleHelper.hookAllMethods("com.android.settings.MiuiSettings$HeaderAdapter", lpparam.getClassLoader(), "setIcon", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 int iconRes = XposedHelpers.getIntField(param.getArgs()[1], "iconRes");
                 if (iconRes == settingsIconResId) {
                     ImageView icon = (ImageView) XposedHelpers.getObjectField(param.getArgs()[0], "icon");
@@ -538,16 +480,16 @@ public class GlobalActions {
         });
     }
 
-    public static void setupForegroundMonitor(PackageLoadedParam lpparam) {
+    public static void setupForegroundMonitor(PackageReadyParam lpparam) {
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.getClassLoader(), new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 final Context mContext = (Context) param.getArgs()[0];
                 final Handler mBgHandler = (Handler) XposedHelpers.getObjectField(param.getThisObject(), "mBgHandler");
                 ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.getClassLoader(), "updateTopActivity", new MethodHook() {
                     private String pkgName = "";
                     @Override
-                    protected void after(final AfterHookCallback param) throws Throwable {
+                    protected void after(final MethodHookParam param) throws Throwable {
                         ComponentName mTopActivity = (ComponentName) XposedHelpers.getObjectField(param.getThisObject(), "mTopActivity");
                         if (mTopActivity != null && !pkgName.equals(mTopActivity.getPackageName())) {
                             pkgName = mTopActivity.getPackageName();
@@ -559,7 +501,7 @@ public class GlobalActions {
                     ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.getClassLoader(), "onSystemBarAttributesChanged", new MethodHook() {
                         private boolean fullScreen = false;
                         @Override
-                        protected void after(final AfterHookCallback param) throws Throwable {
+                        protected void after(final MethodHookParam param) throws Throwable {
                             Object statusBarStateController = XposedHelpers.getObjectField(param.getThisObject(), "statusBarStateController");
                             boolean isFullScreen = XposedHelpers.getBooleanField(statusBarStateController, "mIsFullscreen");
                             if (fullScreen != isFullScreen) {
@@ -578,16 +520,15 @@ public class GlobalActions {
         });
     }
 
-    public static void setupGlobalActions(XposedModuleInterface.SystemServerLoadedParam lpparam) {
+    public static void setupGlobalActions(XposedModuleInterface.SystemServerStartingParam lpparam) {
         ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.getClassLoader(), "initInternal", new MethodHook() {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "SimulateMenu");
                 intentfilter.addAction(ACTION_PREFIX + "ForceClose");
-                intentfilter.addAction(ACTION_PREFIX + "ToggleColorInversion");
                 intentfilter.addAction(ACTION_PREFIX + "SwitchToPrevApp");
                 final Object thisObject = param.getThisObject();
                 mContext.registerReceiver(new BroadcastReceiver() {
@@ -623,21 +564,6 @@ public class GlobalActions {
                                 closeApp.invoke(thisObject);
                             } catch (Throwable t) {
                                 XposedHelpers.log(t);
-                            }
-                        }
-                        else if (action.equals(ACTION_PREFIX + "ToggleColorInversion")) {
-                            int opt = 0;
-                            try {
-                                opt = Settings.Secure.getInt(context.getContentResolver(), "accessibility_display_inversion_enabled");
-                                int conflictProp = (int) ModuleHelper.proxySystemProperties("getInt", "ro.df.effect.conflict", 0, null);
-                                int conflictProp2 = (int) ModuleHelper.proxySystemProperties("getInt", "ro.vendor.df.effect.conflict", 0, null);
-                                boolean hasConflict = conflictProp == 1 || conflictProp2 == 1;
-                                Object dfMgr = XposedHelpers.callStaticMethod(XposedHelpers.findClass("miui.hardware.display.DisplayFeatureManager", null), "getInstance");
-                                if (hasConflict && opt == 0) XposedHelpers.callMethod(dfMgr, "setScreenEffect", 15, 1);
-                                Settings.Secure.putInt(context.getContentResolver(), "accessibility_display_inversion_enabled", opt == 0 ? 1 : 0);
-                                if (hasConflict && opt != 0) XposedHelpers.callMethod(dfMgr, "setScreenEffect", 15, 0);
-                            } catch (Settings.SettingNotFoundException e) {
-                                XposedHelpers.log(e);
                             }
                         }
                         else if (action.equals(ACTION_PREFIX + "SwitchToPrevApp")) {
@@ -680,20 +606,19 @@ public class GlobalActions {
         });
     }
 
-    public static void setupStatusBar(PackageLoadedParam lpparam) {
+    public static void setupStatusBar(PackageReadyParam lpparam) {
         Class<?> StatusBarClass = findClassIfExists("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.getClassLoader());
         if (StatusBarClass == null) return;
         ModuleHelper.findAndHookMethod(StatusBarClass, "start", new MethodHook() {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context) XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
 
                 intentfilter.addAction(ACTION_PREFIX + "ExpandNotifications");
                 intentfilter.addAction(ACTION_PREFIX + "ExpandSettings");
                 intentfilter.addAction(ACTION_PREFIX + "OpenRecents");
-                intentfilter.addAction(ACTION_PREFIX + "OpenVolumeDialog");
 
                 intentfilter.addAction(ACTION_PREFIX + "ToggleGPS");
                 intentfilter.addAction(ACTION_PREFIX + "ToggleHotspot");
@@ -734,9 +659,9 @@ public class GlobalActions {
             }
         });
 
-        ModuleHelper.findAndHookMethod("com.android.wm.shell.miuifreeform.MiuiFreeformModeController", lpparam.getClassLoader(), "onInit", new MethodHook() {
+        ModuleHelper.findAndHookMethod("com.android.wm.shell.multitasking.miuifreeform.MiuiFreeformModeController", lpparam.getClassLoader(), "onInit", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "PinningWindow");
@@ -798,7 +723,7 @@ public class GlobalActions {
         });
         ModuleHelper.findAndHookMethod("com.android.wm.shell.sosc.SoScSplitScreenController", lpparam.getClassLoader(), "onInit", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "SplitScreen");
@@ -845,7 +770,7 @@ public class GlobalActions {
         });
         ModuleHelper.hookAllConstructors("com.android.systemui.controlcenter.policy.AutoBrightnessController", lpparam.getClassLoader(),  new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "context");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "ToggleAutoBrightness");
