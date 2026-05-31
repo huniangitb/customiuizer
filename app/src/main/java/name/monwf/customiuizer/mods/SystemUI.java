@@ -2268,7 +2268,7 @@ public class SystemUI {
                             }
                             if (showSteps) {
                                 ModuleHelper.setViewInfo(mCarrierText, "stepsTpl", "%s " + carrierString);
-                                param.getArgs()[textIndex] = StepCounterController.getStepsShowValue(mCarrierText);
+                                param.getArgs()[textIndex] = "0";
                             }
                             else {
                                 param.getArgs()[textIndex] = carrierString;
@@ -2295,7 +2295,7 @@ public class SystemUI {
                                 }
                                 if (prefixWithSteps) {
                                     ModuleHelper.setViewInfo(mCarrierText, "stepsTpl", "%s " + carrierString);
-                                    param.getArgs()[textIndex] = StepCounterController.getStepsShowValue(mCarrierText);
+                                    param.getArgs()[textIndex] = "0";
                                 }
                             }
                             else if (hideOperator) {
