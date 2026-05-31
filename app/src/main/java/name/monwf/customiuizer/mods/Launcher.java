@@ -685,7 +685,7 @@ public class Launcher {
         });
 
         ModuleHelper.hookAllMethods("com.miui.home.launcher.DeviceConfig", lpparam.getClassLoader(), "isCellSizeChangedByTheme", new MethodHook() {
-            HookerClassHelper.CustomMethodUnhooker nowordHook;
+            XposedInterface.HookHandle nowordHook;
             @Override
             protected void before(final MethodHookParam param) throws Throwable {
                 nowordHook = ModuleHelper.findAndHookMethod("com.miui.home.launcher.common.Utilities", lpparam.getClassLoader(), "isNoWordModel", HookerClassHelper.returnConstant(false));
