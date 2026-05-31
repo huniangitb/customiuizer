@@ -1,5 +1,7 @@
 package name.monwf.customiuizer.mods;
 
+import static java.lang.System.currentTimeMillis;
+
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -29,7 +31,7 @@ public class StepCounterController {
     }
 
     private static int getCurrentSteps(Context context) {
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         // Cache step count for 5 seconds to avoid excessive sensor queries
         if (now - lastUpdateTime < 5000 && cachedSteps > 0) {
             return cachedSteps;
