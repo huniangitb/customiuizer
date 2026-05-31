@@ -424,4 +424,65 @@ public class ModuleHelper {
         }
         return target;
     }
+
+    /**
+     * Finds the first declared method in a class matching the given name.
+     */
+    public static Method findFirstMethodByName(Class<?> clazz, String methodName) {
+        if (clazz == null) return null;
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.getName().equals(methodName)) {
+                method.setAccessible(true);
+                return method;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Creates a Kotlin MutableStateFlow with an initial value and returns it as a read-only StateFlow.
+     */
+    public static Object createReadonlyFlowWithInitValue(Object value, ClassLoader classLoader) {
+        try {
+            Class<?> MutableStateFlowCls = XposedHelpers.findClass("kotlinx.coroutines.flow.MutableStateFlow", classLoader);
+            Object mutableFlow = XposedHelpers.newInstance(MutableStateFlowCls, value);
+            return XposedHelpers.callMethod(mutableFlow, "asStateFlow");
+        } catch (Throwable t) {
+            XposedHelpers.log(t);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the underlying MutableStateFlow from a Kotlin ReadonlyStateFlow wrapper.
+     */
+    public static Object getMutableFlowOfReadonlyFlow(Object readonlyFlow) {
+        if (readonlyFlow == null) return null;
+        try {
+            java.lang.reflect.Field flowField = XposedHelpers.findField(readonlyFlow.getClass(), "flow");
+            return flowField.get(readonlyFlow);
+        } catch (Throwable t) {
+            XposedHelpers.log(t);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the FlashlightController instance from SystemUI dependencies.
+     */
+    public static Object getFlashlightController(ClassLoader classLoader, String fieldName) {
+        try {
+            Class<?> DependencyClass = findClass("com.android.systemui.Dependency", classLoader);
+            Object flashCtrlCls = findClass("com.android.systemui.flashlight.FlashlightController", classLoader);
+            return XposedHelpers.callStaticMethod(DependencyClass, "get", flashCtrlCls);
+        } catch (Throwable t1) {
+            try {
+                Object centralSurfaces = getDepInstance(classLoader, "com.android.systemui.statusbar.phone.CentralSurfaces");
+                return XposedHelpers.getObjectField(centralSurfaces, fieldName);
+            } catch (Throwable t2) {
+                XposedHelpers.log(t2);
+                return null;
+            }
+        }
+    }
 }
