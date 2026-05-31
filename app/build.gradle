@@ -28,7 +28,7 @@ android {
         minSdkVersion 34
         //noinspection OldTargetApi,ExpiredTargetSdkVersion
         targetSdkVersion 34
-        compileSdk 35
+        compileSdk 36
         versionCode lastVersion
         versionName lastVersionName
         resConfigs 'ru-rRU', 'zh-rCN', 'ja-rJP', 'vi-rVN', 'cs-rCZ', 'pt-rBR', 'tr-rTR', 'es-rES'
