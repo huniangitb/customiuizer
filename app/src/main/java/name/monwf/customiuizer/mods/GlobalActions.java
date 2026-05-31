@@ -49,15 +49,15 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface.AfterHookCallback;
 import io.github.libxposed.api.XposedModuleInterface;
-import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam;
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam;
 import miui.app.MiuiFreeFormManager;
 import miui.process.ForegroundInfo;
 import miui.process.ProcessManager;
 import name.monwf.customiuizer.MainModule;
 import name.monwf.customiuizer.R;
 import name.monwf.customiuizer.mods.utils.HookerClassHelper.MethodHook;
+import name.monwf.customiuizer.mods.utils.HookerClassHelper.MethodHookParam;
 import name.monwf.customiuizer.mods.utils.ModuleHelper;
 import name.monwf.customiuizer.mods.utils.XposedHelpers;
 import name.monwf.customiuizer.utils.Helpers;
@@ -479,11 +479,11 @@ public class GlobalActions {
         }
     };
 
-    public static void miuizerSettingsHook(PackageLoadedParam lpparam) {
+    public static void miuizerSettingsHook(PackageReadyParam lpparam) {
         int settingsIconResId = MainModule.resHooks.addFakeResource("ic_miuizer_settings", R.drawable.ic_miuizer_settings, "drawable");
         ModuleHelper.findAndHookMethod("com.android.settings.MiuiSettings", lpparam.getClassLoader(), "updateHeaderList", List.class, new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 if (param.getArgs()[0] == null) return;
 
                 Context mContext = ((Activity)param.getThisObject()).getBaseContext();
@@ -527,7 +527,7 @@ public class GlobalActions {
         });
         ModuleHelper.hookAllMethods("com.android.settings.MiuiSettings$HeaderAdapter", lpparam.getClassLoader(), "setIcon", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 int iconRes = XposedHelpers.getIntField(param.getArgs()[1], "iconRes");
                 if (iconRes == settingsIconResId) {
                     ImageView icon = (ImageView) XposedHelpers.getObjectField(param.getArgs()[0], "icon");
@@ -538,16 +538,16 @@ public class GlobalActions {
         });
     }
 
-    public static void setupForegroundMonitor(PackageLoadedParam lpparam) {
+    public static void setupForegroundMonitor(PackageReadyParam lpparam) {
         ModuleHelper.hookAllConstructors("com.android.systemui.statusbar.policy.NetworkSpeedController", lpparam.getClassLoader(), new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 final Context mContext = (Context) param.getArgs()[0];
                 final Handler mBgHandler = (Handler) XposedHelpers.getObjectField(param.getThisObject(), "mBgHandler");
                 ModuleHelper.findAndHookMethod("com.miui.systemui.functions.MiuiTopActivityObserver", lpparam.getClassLoader(), "updateTopActivity", new MethodHook() {
                     private String pkgName = "";
                     @Override
-                    protected void after(final AfterHookCallback param) throws Throwable {
+                    protected void after(final MethodHookParam param) throws Throwable {
                         ComponentName mTopActivity = (ComponentName) XposedHelpers.getObjectField(param.getThisObject(), "mTopActivity");
                         if (mTopActivity != null && !pkgName.equals(mTopActivity.getPackageName())) {
                             pkgName = mTopActivity.getPackageName();
@@ -559,7 +559,7 @@ public class GlobalActions {
                     ModuleHelper.hookAllMethods("com.android.systemui.statusbar.phone.SystemBarAttributesListener", lpparam.getClassLoader(), "onSystemBarAttributesChanged", new MethodHook() {
                         private boolean fullScreen = false;
                         @Override
-                        protected void after(final AfterHookCallback param) throws Throwable {
+                        protected void after(final MethodHookParam param) throws Throwable {
                             Object statusBarStateController = XposedHelpers.getObjectField(param.getThisObject(), "statusBarStateController");
                             boolean isFullScreen = XposedHelpers.getBooleanField(statusBarStateController, "mIsFullscreen");
                             if (fullScreen != isFullScreen) {
@@ -578,11 +578,11 @@ public class GlobalActions {
         });
     }
 
-    public static void setupGlobalActions(XposedModuleInterface.SystemServerLoadedParam lpparam) {
+    public static void setupGlobalActions(XposedModuleInterface.SystemServerStartingParam lpparam) {
         ModuleHelper.hookAllMethods("com.android.server.policy.BaseMiuiPhoneWindowManager", lpparam.getClassLoader(), "initInternal", new MethodHook() {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "SimulateMenu");
@@ -680,13 +680,13 @@ public class GlobalActions {
         });
     }
 
-    public static void setupStatusBar(PackageLoadedParam lpparam) {
+    public static void setupStatusBar(PackageReadyParam lpparam) {
         Class<?> StatusBarClass = findClassIfExists("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.getClassLoader());
         if (StatusBarClass == null) return;
         ModuleHelper.findAndHookMethod(StatusBarClass, "start", new MethodHook() {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context) XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
 
@@ -736,7 +736,7 @@ public class GlobalActions {
 
         ModuleHelper.findAndHookMethod("com.android.wm.shell.miuifreeform.MiuiFreeformModeController", lpparam.getClassLoader(), "onInit", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "PinningWindow");
@@ -798,7 +798,7 @@ public class GlobalActions {
         });
         ModuleHelper.findAndHookMethod("com.android.wm.shell.sosc.SoScSplitScreenController", lpparam.getClassLoader(), "onInit", new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "mContext");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "SplitScreen");
@@ -845,7 +845,7 @@ public class GlobalActions {
         });
         ModuleHelper.hookAllConstructors("com.android.systemui.controlcenter.policy.AutoBrightnessController", lpparam.getClassLoader(),  new MethodHook() {
             @Override
-            protected void after(final AfterHookCallback param) throws Throwable {
+            protected void after(final MethodHookParam param) throws Throwable {
                 Context mContext = (Context)XposedHelpers.getObjectField(param.getThisObject(), "context");
                 IntentFilter intentfilter = new IntentFilter();
                 intentfilter.addAction(ACTION_PREFIX + "ToggleAutoBrightness");

@@ -9,8 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface.AfterHookCallback;
-import io.github.libxposed.api.XposedInterface.BeforeHookCallback;
 import io.github.libxposed.api.XposedModuleInterface;
 import name.monwf.customiuizer.mods.utils.HookerClassHelper.MethodHook;
 import name.monwf.customiuizer.mods.utils.ModuleHelper;
@@ -22,7 +20,7 @@ public class PackagePermissions {
 
 	private static final ArrayList<String> systemPackages = new ArrayList<String>();
 
-	public static void hook(XposedModuleInterface.SystemServerLoadedParam lpparam) {
+	public static void hook(XposedModuleInterface.SystemServerStartingParam lpparam) {
 		systemPackages.add(Helpers.modulePkg);
 		//systemPackages.add("com.miui.packageinstaller");
 
@@ -31,7 +29,7 @@ public class PackagePermissions {
 //		ModuleHelper.hookAllMethods(PMSCls, lpparam.getClassLoader(), "shouldGrantPermissionBySignature",
 //			new MethodHook() {
 //				@Override
-//				protected void before(final BeforeHookCallback param) throws Throwable {
+//				protected void before(final MethodHookParam param) throws Throwable {
 //					String pkgName = (String)XposedHelpers.callMethod(param.getArgs()[0], "getPackageName");
 //					if (systemPackages.contains(pkgName)) param.returnAndSkip(true);
 //				}
@@ -41,7 +39,7 @@ public class PackagePermissions {
 //		ModuleHelper.hookAllMethods("com.android.server.pm.PackageManagerServiceUtils", lpparam.getClassLoader(), "verifySignatures",
 //			new MethodHook() {
 //				@Override
-//				protected void before(final BeforeHookCallback param) throws Throwable {
+//				protected void before(final MethodHookParam param) throws Throwable {
 //					String pkgName = (String)XposedHelpers.callMethod(param.getArgs()[0], "getName");
 //					if (systemPackages.contains(pkgName)) param.returnAndSkip(true);
 //				}
@@ -53,7 +51,7 @@ public class PackagePermissions {
 //		ModuleHelper.hookAllMethods(ActQueryService, lpparam.getClassLoader(), "queryIntentActivitiesInternal", new MethodHook() {
 //			@Override
 //			@SuppressWarnings("unchecked")
-//			protected void after(final AfterHookCallback param) throws Throwable {
+//			protected void after(final MethodHookParam param) throws Throwable {
 //				if (param.getArgs().length < 6) return;
 //				List<ResolveInfo> infos = (List<ResolveInfo>)param.getResult();
 //				if (infos != null) {
@@ -66,7 +64,7 @@ public class PackagePermissions {
 //
 //		ModuleHelper.findAndHookMethod("android.content.pm.ApplicationInfo", lpparam.getClassLoader(), "isSystemApp", new MethodHook() {
 //			@Override
-//			protected void after(final AfterHookCallback param) throws Throwable {
+//			protected void after(final MethodHookParam param) throws Throwable {
 //				ApplicationInfo ai = (ApplicationInfo)param.getThisObject();
 //				if (ai != null && systemPackages.contains(ai.packageName)) param.setResult(true);
 //			}
@@ -74,7 +72,7 @@ public class PackagePermissions {
 //
 //		ModuleHelper.findAndHookMethod("android.content.pm.ApplicationInfo", lpparam.getClassLoader(), "isSignedWithPlatformKey", new MethodHook() {
 //			@Override
-//			protected void after(final AfterHookCallback param) throws Throwable {
+//			protected void after(final MethodHookParam param) throws Throwable {
 //				ApplicationInfo ai = (ApplicationInfo)param.getThisObject();
 //				if (ai != null && systemPackages.contains(ai.packageName)) param.setResult(true);
 //			}
@@ -82,7 +80,7 @@ public class PackagePermissions {
 //
 //		ModuleHelper.hookAllMethods("com.android.server.wm.ActivityRecordInjector", lpparam.getClassLoader(), "canShowWhenLocked", new MethodHook() {
 //			@Override
-//			protected void before(final BeforeHookCallback param) throws Throwable {
+//			protected void before(final MethodHookParam param) throws Throwable {
 //				param.returnAndSkip(true);
 //			}
 //		});
